@@ -8,6 +8,9 @@ Session 3's notebook (*Memory and Tools*), moved into `.py` files and given:
 - **skills** in a `skills/` folder, discovered progressively;
 - **lecture video search**: the session recordings split into chapters, so the tutor can
   answer "what did Josh say about GRPO?" and send the student to the right minute;
+- **Colab lessons** over MCP: Google's Colab MCP server lets the tutor build a short
+  notebook in the student's browser, with explanations and example cells it has run to
+  check, and an exercise to finish;
 - a **student memory** (`MEMORY.md`) and the **study log** from Sessions 2 and 3;
 - **the loop** from Session 4, so a question can take several tool calls;
 - a **Gradio** chat in place of the notebook's `ChatUI`.
@@ -23,6 +26,10 @@ export OPENAI_API_KEY=...        # or have OPENAI_AGENTS_COURSE set, as in env.s
 uv run tutor                     # http://localhost:7860
 ```
 
+The app starts Google's Colab MCP server alongside it (with `uvx`, a few seconds), and
+the Colab notebook opens in the default browser of the computer running the app, so
+that browser needs a Google sign-in. `uv run tutor --no-colab` leaves Colab out.
+
 `uv run tutor --share` adds a public `gradio.live` link. `TUTOR_MODEL` picks another
 model (any gpt-5.4 model works; older ones reject `reasoning_effort: "none"`), and
 `TUTOR_CONTEXT` sets the context budget for auto-compaction (default 32,000 tokens).
@@ -31,6 +38,7 @@ From the command line, each argument one message in the same conversation:
 
 ```bash
 uv run python scripts/ask.py "What was the headlight analogy?" "How does that connect to reasoning models?"
+uv run python scripts/ask.py --colab "Make me a notebook that walks through a tool call round trip."
 ```
 
 The first run copies the example student from Session 3 (a backend engineer building
@@ -42,7 +50,7 @@ Edit or empty `student/MEMORY.md` and `student/study_log.tsv` to make it yours.
 | | |
 |---|---|
 | `TUTOR.md` | The tutor's persona and guidance, re-read before every message |
-| `skills/` | `lecture-videos`, `quiz`, `study-log`: one folder each, with a `SKILL.md` |
+| `skills/` | `lecture-videos`, `quiz`, `study-log`, `colab-lesson`: one folder each, with a `SKILL.md` |
 | `tutor/llm.py` | `LLM` and `EmbeddingModel` (Session 3's, pointed at OpenAI) |
 | `tutor/memory.py` | `Memory` and `CompactMemory` (Session 3's) |
 | `tutor/tools.py` | `tool_to_schema` and `NativeTools` (Session 3's) |
@@ -50,6 +58,7 @@ Edit or empty `student/MEMORY.md` and `student/study_log.tsv` to make it yours.
 | `tutor/agent.py` | `Trajectory` and `TinyAgent`, with the system prompt from files and the loop |
 | `tutor/lectures.py` | The chapters, their embeddings, `search_lectures` and `read_lecture` |
 | `tutor/student.py` | `MEMORY.md` and the study log: `remember`, `read_log`, `log_session` |
+| `tutor/mcp.py` | A minimal MCP client (JSON-RPC over stdio) and `MCPServer`, which puts a server's tools in the registry |
 | `tutor/build.py` | `build_tutor()`: everything wired into one agent |
 | `tutor/app.py` | The Gradio chat |
 | `data/` | `sessions.json` (titles, recording pages), captions, chapters |
@@ -109,21 +118,57 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
 have a coding agent follow `scripts/CHAPTERS.md` for `<N>`, and run
 `python3 scripts/check_chapters.py <N>`. The index rebuilds on the next start.
 
+### Colab lessons over MCP
+
+Ask for a notebook ("Build me a Colab notebook that shows how message history works"),
+or say yes when the tutor offers one, and the **colab-lesson** skill takes over:
+
+1. **Connect.** `open_colab_browser_connection` opens a scratch Colab notebook in a new
+   browser tab and waits up to 60 s for it to connect back; the chat says so while it
+   waits. Once connected, the server's tool list changes to Colab's notebook tools
+   (`add_text_cell`, `add_code_cell`, `run_code_cell`, `get_cells`, `update_cell`,
+   `move_cell`, `delete_cell`), and the tutor sees them on its next step.
+2. **Build.** Three short steps, each a text cell and a code cell, appended after the
+   notebook's existing cells. The tutor runs each code cell and fixes any error, so the
+   examples work when the student gets them. Ideas about the harness use a stand-in
+   function for the model, so the cells run in seconds with no model or key.
+3. **Hand over.** A `### Try it` cell and a starter code cell with a `# TODO`, left
+   unrun, then a few lines in the chat. The tutor can read the student's attempt with
+   `get_cells` and give feedback.
+
+`tutor/mcp.py` is the client: Session 3B's mini client as a class. It starts the server
+once and keeps it running, because the server holds the browser connection (the book's
+`MCPTools` starts a fresh server for every call). It answers the server's pings,
+re-lists tools when the server says they changed, and trims results for the model
+(plots become `"(an image)"`, terminal colors go). `NativeTools.add_tool` now takes a
+ready-made schema, since MCP tools arrive with their JSON Schema. One server is shared
+by every chat in the app, so they share one notebook.
+
+Tested live on Oct 21 (Chris's Mac and browser, colab-mcp `b9ab389`), four lessons:
+- The tab connected on the first call each time; a second lesson in the same app reused
+  the connection, with no new tab.
+- In the two command-line runs, all 9 cells the tutor ran came back without an error.
+- The exercise's `# TODO` starter cell made it into 1 of the 3 complete lessons; the
+  other two stopped at the `### Try it` text.
+- Lesson content is only as accurate as the model's idea of the course: asked about
+  `CompactMemory`, it kept the last few messages plus a summary, where the course's
+  version replaces the whole conversation. The tutor can't read the course's code yet.
+
 ### The loop
 
 Session 3's `TinyAgent` stops at the observation, and **Continue** sends it back. Here
 `TinyAgent.steps()` keeps going until the model answers, for up to **Max steps** LLM
-calls per message (default 6; a lecture question usually takes 4: load the skill,
-search, read, answer). Set it to 1 for Session 3's behavior, and step through with
-**Continue**.
+calls per message (default 25: a lecture question takes about 4 steps, a Colab lesson
+about 15). Set it to 1 for Session 3's behavior, and step through with **Continue**.
 
 ### The chat
 
 From Session 3's `ChatUI`: tool steps shown as action and observation (click to open),
 token counts on each step, **Continue**, **Compact** (and auto-compaction past 75% of
 the context budget), attached files, the time on each message, **Clear** keeping the
-system prompt. Each browser tab has its own conversation; the student's folder is
-shared.
+system prompt. While a step runs, the chat says what it's waiting on (the model, or
+which tool, and for the Colab connection what the student needs to do). Each browser tab
+has its own conversation; the student's folder and the Colab notebook are shared.
 
 ## Notes on the model
 

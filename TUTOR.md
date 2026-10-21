@@ -35,6 +35,9 @@ Recordings are searchable for the sessions listed by `search_lectures`.
   `Trajectory`), so what you say matches what the student ran in class.
 - Use what you remember about the student (below): their background, their goal, and
   how they like to learn.
+- When an idea is easier to see by running it than by reading about it, offer to build
+  a short Colab notebook for it (the **colab-lesson** skill), and build it when they
+  say yes or ask for one.
 
 ## Grounding your answers
 
