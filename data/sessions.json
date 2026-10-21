@@ -1,0 +1,18 @@
+[
+  {
+    "session": 1,
+    "date": "2026-10-14",
+    "title": "What makes an agent",
+    "lecture": "Luis Serrano: what makes an agent",
+    "coding": "Chris McCormick: talking to an LLM (Colab, ollama and Gemma 4, the chat-completions request, message history, the TinyAgent's LLM and Memory)",
+    "url": "https://www.ragpack.ai/products/introduction-to-agents/categories/2160909364/posts/2201045339"
+  },
+  {
+    "session": 2,
+    "date": "2026-10-17",
+    "title": "LLMs and reasoning",
+    "lecture": "Josh Starmer: LLMs and reasoning",
+    "coding": "Chris McCormick: reasoning and the manual agent (thinking on and off, the trajectory, skills as markdown files, a tutor that writes out tool calls for the student to run)",
+    "url": "https://www.ragpack.ai/products/introduction-to-agents/categories/2160923677/posts/2201100744"
+  }
+]

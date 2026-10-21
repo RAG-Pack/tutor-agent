@@ -1,0 +1,142 @@
+# tutor-agent
+
+A course tutor for RAG Pack's *Introduction to Agents*. It's the `TinyAgent` from
+Session 3's notebook (*Memory and Tools*), moved into `.py` files and given:
+
+- a **`TUTOR.md`**, always in the system prompt, with the tutor's persona and guidance
+  (the way Claude Code always loads `CLAUDE.md`);
+- **skills** in a `skills/` folder, discovered progressively;
+- **lecture video search**: the session recordings split into chapters, so the tutor can
+  answer "what did Josh say about GRPO?" and send the student to the right minute;
+- a **student memory** (`MEMORY.md`) and the **study log** from Sessions 2 and 3;
+- **the loop** from Session 4, so a question can take several tool calls;
+- a **Gradio** chat in place of the notebook's `ChatUI`.
+
+It runs on OpenAI's `gpt-5.4-nano`, the smallest and cheapest model from the Oct 6 tests:
+2–4 s per turn, about a cent for a 10-question chat.
+
+## Run it
+
+```bash
+uv sync
+export OPENAI_API_KEY=...        # or have OPENAI_AGENTS_COURSE set, as in env.sh
+uv run tutor                     # http://localhost:7860
+```
+
+`uv run tutor --share` adds a public `gradio.live` link. `TUTOR_MODEL` picks another
+model (any gpt-5.4 model works; older ones reject `reasoning_effort: "none"`), and
+`TUTOR_CONTEXT` sets the context budget for auto-compaction (default 32,000 tokens).
+
+From the command line, each argument one message in the same conversation:
+
+```bash
+uv run python scripts/ask.py "What was the headlight analogy?" "How does that connect to reasoning models?"
+```
+
+The first run copies the example student from Session 3 (a backend engineer building
+a Discord bot, with five logged study sessions) into `student/`, which git ignores.
+Edit or empty `student/MEMORY.md` and `student/study_log.tsv` to make it yours.
+
+## What's where
+
+| | |
+|---|---|
+| `TUTOR.md` | The tutor's persona and guidance, re-read before every message |
+| `skills/` | `lecture-videos`, `quiz`, `study-log`: one folder each, with a `SKILL.md` |
+| `tutor/llm.py` | `LLM` and `EmbeddingModel` (Session 3's, pointed at OpenAI) |
+| `tutor/memory.py` | `Memory` and `CompactMemory` (Session 3's) |
+| `tutor/tools.py` | `tool_to_schema` and `NativeTools` (Session 3's) |
+| `tutor/skills.py` | `Skills`: a `NativeTools` with the `load_skill` tool and the skills list |
+| `tutor/agent.py` | `Trajectory` and `TinyAgent`, with the system prompt from files and the loop |
+| `tutor/lectures.py` | The chapters, their embeddings, `search_lectures` and `read_lecture` |
+| `tutor/student.py` | `MEMORY.md` and the study log: `remember`, `read_log`, `log_session` |
+| `tutor/build.py` | `build_tutor()`: everything wired into one agent |
+| `tutor/app.py` | The Gradio chat |
+| `data/` | `sessions.json` (titles, recording pages), captions, chapters |
+| `scripts/` | Chaptering a recording, building the index, `ask.py` |
+
+## How it works
+
+### The system prompt: `TUTOR.md`, the student's memory, the skills list
+
+`TinyAgent` builds its system prompt from files, re-read before every message so an
+edit takes effect on the next one: `TUTOR.md`, then `student/MEMORY.md`, then the skills
+list. That replaces the notebook's **System** field, where the student typed which
+files to include. The **What the model sees** tab shows the result, the messages and
+the tool schemas.
+
+### Skills, progressively
+
+A skill is a folder with a `SKILL.md`: frontmatter with a `name` and `description`, then
+instructions. They load in three levels:
+
+1. **Always**: each skill's name and description, one line each in the system prompt.
+2. **When a request matches**: the model calls `load_skill(name)` and gets the
+   instructions.
+3. **When the instructions say so**: another file in the skill's folder,
+   `load_skill(name, file)` (`lecture-videos` keeps example answers in `examples.md`).
+
+So a skill costs a line of context until it's used. The book's `Skills` (Ch. 5) makes
+each skill a tool of its own; here one `load_skill` tool serves them all. Adding a
+folder adds a skill, no restart needed.
+
+On 18 test requests that each matched a skill, `gpt-5.4-nano` loaded the right one 18
+times, once the skills list said to load a matching skill "even when you think you know
+how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
+
+### Lecture video search
+
+1. **Chapters.** A coding agent reads a session's transcript without timestamps, marks
+   the natural break points, titles and summarizes each chapter, then matches each
+   chapter's first line to the captions for its start time. The brief is
+   [`scripts/CHAPTERS.md`](scripts/CHAPTERS.md); the results are in `data/chapters/`
+   (Session 1: 35 chapters, Session 2: 28). `scripts/check_chapters.py` checks them
+   against the captions.
+2. **Index.** Each chapter gets two embeddings (OpenAI `text-embedding-3-small`): its
+   title and summary, and its transcript. A chapter's score is the better of the two. On
+   16 test questions the title-and-summary embedding put the right chapter first 15
+   times, the transcript alone 12 times (a whole chapter's talk dilutes its topic). The
+   index builds itself on first use and whenever the chapters change.
+3. **Tools.** `search_lectures(query, session)` returns the 4 best chapters (times,
+   speaker, summary); `read_lecture(session, chapter)` returns that chapter's
+   transcript with a time every ~30 seconds. The `lecture-videos` skill says how to
+   answer: explain it the instructor's way, then give the time and the recording's page.
+   The course site has no links to a time in a video, so the tutor says "open this page
+   and skip to 22:09".
+
+**Adding a session's recording:** put its captions in
+`data/transcripts/session<N>.srt`, add it to `data/sessions.json` (with its page URL),
+have a coding agent follow `scripts/CHAPTERS.md` for `<N>`, and run
+`python3 scripts/check_chapters.py <N>`. The index rebuilds on the next start.
+
+### The loop
+
+Session 3's `TinyAgent` stops at the observation, and **Continue** sends it back. Here
+`TinyAgent.steps()` keeps going until the model answers, for up to **Max steps** LLM
+calls per message (default 6; a lecture question usually takes 4: load the skill,
+search, read, answer). Set it to 1 for Session 3's behavior, and step through with
+**Continue**.
+
+### The chat
+
+From Session 3's `ChatUI`: tool steps shown as action and observation (click to open),
+token counts on each step, **Continue**, **Compact** (and auto-compaction past 75% of
+the context budget), attached files, the time on each message, **Clear** keeping the
+system prompt. Each browser tab has its own conversation; the student's folder is
+shared.
+
+## Notes on the model
+
+- **No Thinking checkbox.** The gpt-5.4 models refuse `reasoning_effort` other than
+  `"none"` together with `tools` in `/chat/completions` (HTTP 400, still true on Oct 21),
+  and the tutor always has tools. Reasoning with tools would need OpenAI's Responses API.
+- **One tool call per step.** Requests set `parallel_tool_calls: false`, because
+  `TinyAgent` takes one action per step.
+- **Tool results need the call's id.** `Memory` copies it into each `tool` message, as in
+  Session 3; OpenAI returns HTTP 400 without it (ollama doesn't check).
+- **The context budget is ours, not the model's.** `gpt-5.4-nano` takes 272k prompt
+  tokens, but every request re-sends the whole conversation, so cost grows with the
+  square of a chat's length. Compacting at 75% of 32k keeps a long chat cheap.
+- **Cost.** A lecture question is ~4 requests of 2–6k prompt tokens, mostly cached
+  after the first; the course project's data-sharing allowance covers 2.5M small-model
+  tokens a day. The chapter index is ~50k embedding tokens, about a tenth of a cent.

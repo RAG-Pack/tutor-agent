@@ -1,0 +1,13 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# The student's own memory and study log (the first run copies examples/student here)
+/student/
+
+# Rebuilt from data/chapters on first use (a few cents of embeddings at most)
+data/lecture_index.npz
+
+# Gradio
+.gradio/

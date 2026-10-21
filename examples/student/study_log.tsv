@@ -1,0 +1,6 @@
+start	end	learned
+2026-10-14 23:10 UTC	2026-10-14 23:45 UTC	An LLM call is one HTTP request: the whole conversation goes in as JSON, and one message comes back.
+2026-10-15 23:30 UTC	2026-10-16 00:05 UTC	The model doesn't remember anything between calls. Memory is just the list of messages we send every time.
+2026-10-17 18:20 UTC	2026-10-17 18:55 UTC	Reasoning is extra tokens the model writes before its answer. reasoning_effort turns it on or off, and the reasoning comes back in its own field.
+2026-10-18 22:00 UTC	2026-10-18 22:40 UTC	A skill is a prompt saved to a markdown file and added to the system prompt. ChatUI re-reads the file on every message.
+2026-10-19 23:15 UTC	2026-10-19 23:50 UTC	In the manual agent, the tutor can only write out the log_session(...) call. I have to paste it into a cell and run it myself.
