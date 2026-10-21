@@ -14,16 +14,15 @@ keep the notebook's structure, names, step comments ("# 2. THOUGHT: ...") and pl
 modules beside them, and say in the module docstring what changed from Session 3 and
 why. That keeps a diff against the notebook short enough to teach from.
 
-`main` is the simple version. Colab lessons over MCP (`tutor/mcp.py`, the
-`colab-lesson` skill) live on the `colab-mcp` branch, one commit on top of `main`;
-build bigger features on a branch like that too, so `main` stays easy to read.
-
 ## Run and test
 
 - `uv sync`, then `uv run tutor` for the Gradio chat, or
   `uv run python scripts/ask.py "question" "follow-up"` to print every step.
 - The OpenAI key comes from `OPENAI_AGENTS_COURSE` (Chris's env.sh) or
   `OPENAI_API_KEY`. On the Mac mini, API calls need the sandbox off.
+- Colab: `scripts/ask.py --colab ...` (or the app) opens a Colab tab in this computer's
+  default browser, and the connection needs that browser signed in to Google. Tell
+  Chris before a live Colab test, since the tab opens in front of him.
 - Check a behavior change against the model, not just by reading the prompt:
   `gpt-5.4-nano` follows instructions loosely, so run each test prompt a few times and
   count (the README's numbers came from 2–3 runs each).

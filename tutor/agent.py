@@ -8,6 +8,9 @@
   **Continue** button sends it back. Here `steps()` keeps going until the model answers,
   for up to `max_steps` LLM calls, so a lecture question can search, read the chapter,
   then answer. With `max_steps=1` it's Session 3's agent again.
+
+`current_action` is the tool call running right now, so the chat can say what it's
+waiting on (a Colab tab to connect, a cell to run).
 """
 
 from dataclasses import dataclass
@@ -74,6 +77,7 @@ class TinyAgent:
         self.tools = tools
         self.instructions = [Path(path) for path in instructions]  # <-- TUTOR.md, MEMORY.md
         self.trajectory = Trajectory()
+        self.current_action = None
         self.set_system_prompt()
 
     def system_prompt(self) -> str:
@@ -92,7 +96,7 @@ class TinyAgent:
         messages.insert(0, {"role": "system", "content": prompt})
         self.trajectory.system_prompt = prompt
 
-    def run(self, task: str, max_steps: int = 6) -> str:
+    def run(self, task: str, max_steps: int = 20) -> str:
         """Run the agent on a task: step until it answers, or `max_steps`."""
         self.start(task)
         step = None
@@ -106,7 +110,7 @@ class TinyAgent:
         self.memory.add("user", task)
         self.trajectory.initialize(task)
 
-    def steps(self, max_steps: int = 6) -> Iterator[Step]:
+    def steps(self, max_steps: int = 20) -> Iterator[Step]:
         """The loop: one step at a time, until the model answers."""  # <-- New
         for _ in range(max_steps):
             step = self._step()
@@ -141,7 +145,11 @@ class TinyAgent:
         """Execute a tool action."""
 
         # 6. ACTION: execute the tool
-        result = self.tools.execute(response)
+        self.current_action = response.tool_call
+        try:
+            result = self.tools.execute(response)
+        finally:
+            self.current_action = None
 
         # 7. OBSERVATION: add the result to memory, and record the step
         role, observation = self.tools.observation(result)
