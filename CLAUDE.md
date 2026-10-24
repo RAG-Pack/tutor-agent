@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 A course tutor agent for RAG Pack's *Introduction to Agents* (Oct 14–31, 2026). The
-code is the `TinyAgent` from the course's Session 4 notebook (*Planning*, in
-`chrisjmccormick/An-Illustrated-Guide-To-AI-Agents`, `sessions/session4_planning.md`),
+code is the `TinyAgent` from the course's Session 4 notebook (*Planning*, in the
+private course repo `RAG-Pack/intro-to-agents`, `session4/session4_planning.md`),
 moved into `.py` files. `README.md` explains every piece; read it first.
 
 ## Keep the code the course's code
