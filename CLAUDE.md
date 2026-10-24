@@ -41,11 +41,16 @@ tag with a few lines on what's new, so each session's version stays one click aw
 
 ## Data
 
-- `data/chapters/session<N>.json` is written by an agent following
-  `lecture-chapters/CHAPTERS.md` in the course repo (`RAG-Pack/intro-to-agents`,
-  checked out beside this one), whose `check_chapters.py <N>` checks the chapters
-  against `data/transcripts/`. This repo ships the results, and the course repo keeps
-  the tools.
+- This repo is public. The recordings' captions and chapters (`data/transcripts/`,
+  `data/chapters/`) name students who spoke in Q&A, so git ignores them: they live in
+  the private course repo (`RAG-Pack/intro-to-agents`, checked out beside this one, one
+  `session<N>/` folder each) and reach students as the lecture bundle, `tutor-data.zip`,
+  on Session 3's lesson (`BUNDLE_PAGE` in `tutor/lectures.py`). Follow that repo's
+  `lecture-chapters/CHAPTERS.md` to add a recording; its `build_bundle.py --install
+  ../tutor-agent` fills your `data/` to test. Keep transcripts, chat logs and students'
+  names out of this repo's commits, test logs included.
+- `data/sessions.json` stays in git: a session listed there whose chapters a student
+  lacks makes the lecture tools tell them to download the bundle again.
 - `data/lecture_index.npz` rebuilds itself when the chapters change, and git ignores it.
 - `student/` is one student's memory and log, and git ignores it; the example student
   lives in `examples/student/`.

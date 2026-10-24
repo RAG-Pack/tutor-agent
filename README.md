@@ -28,9 +28,18 @@ before planning, with Session 3's **Continue** button.
 
 ```bash
 uv sync
-export OPENAI_API_KEY=...        # or have OPENAI_AGENTS_COURSE set, as in env.sh
-uv run tutor                     # http://localhost:7860
+unzip -o ~/Downloads/tutor-data.zip   # the lecture bundle, below
+export OPENAI_API_KEY=...             # or have OPENAI_AGENTS_COURSE set, as in env.sh
+uv run tutor                          # http://localhost:7860
 ```
+
+**The lecture bundle** holds the recordings' captions and chapters for lecture search.
+Download `tutor-data.zip` from Session 3's lesson on the course site (*3.2 Live
+Session + Recording*) and unzip it in this folder; it fills `data/chapters/` and
+`data/transcripts/`, which git ignores. It's a download inside the course rather than
+part of this repo because the recordings' Q&A has students speaking and named. After
+each session, download the newest one. Without it the tutor still runs, and it tells
+you where to get the bundle when you ask about a lecture.
 
 `uv run tutor --share` adds a public `gradio.live` link. `TUTOR_MODEL` picks another
 model (any gpt-5.4 model works; older ones reject `reasoning_effort: "none"`), and
@@ -56,7 +65,7 @@ Edit or empty `student/MEMORY.md` and `student/study_log.tsv` to make it yours.
 | `tutor/student.py` | `MEMORY.md` and the study log: `remember`, `read_log`, `log_session` |
 | `tutor/build.py` | `build_tutor()`: everything wired into one agent |
 | `tutor/app.py` | The Gradio chat |
-| `data/` | `sessions.json` (titles, recording pages), captions, chapters (made in the course repo) |
+| `data/` | `sessions.json` (titles, recording pages); the lecture bundle adds captions and chapters |
 
 ## How it works
 
@@ -93,8 +102,8 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
    the natural break points, titles and summarizes each chapter, then matches each
    chapter's first line to the captions for its start time. The brief and the tools
    that check its work live with the course material, in `lecture-chapters/` of the
-   course repo (`RAG-Pack/intro-to-agents`, private); this repo ships the results in
-   `data/chapters/` (Session 1: 35 chapters, Session 2: 28, Session 3: 25).
+   course repo (`RAG-Pack/intro-to-agents`, private), and the results reach you in the
+   lecture bundle (Session 1: 35 chapters, Session 2: 28, Session 3: 25).
 2. **Index.** Each chapter gets two embeddings (OpenAI `text-embedding-3-small`): its
    title and summary, and its transcript. A chapter's score is the better of the two. On
    16 test questions the title-and-summary embedding put the right chapter first 15
@@ -117,9 +126,9 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
    a range of times), and none said "chapter" (7 of 15 before the rename).
 
 **Adding a session's recording:** follow `lecture-chapters/CHAPTERS.md` in the course
-repo (`RAG-Pack/intro-to-agents`), with this repo checked out beside it. It puts the
-captions in `data/transcripts/`, the session in `data/sessions.json` and the chapters
-in `data/chapters/`, here; the index rebuilds on the next start.
+repo (`RAG-Pack/intro-to-agents`, private), with this repo checked out beside it. The
+captions and chapters stay there and go out in a new lecture bundle; the session goes
+in `data/sessions.json` here. The index rebuilds on the next start.
 
 ### The loop and the plan
 

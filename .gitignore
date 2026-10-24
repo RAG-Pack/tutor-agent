@@ -6,6 +6,11 @@ __pycache__/
 # The student's own memory and study log (the first run copies examples/student here)
 /student/
 
+# The lecture bundle (tutor-data.zip from the course site): its captions name students,
+# so it's a download inside the course rather than part of this repo
+data/chapters/
+data/transcripts/
+
 # Rebuilt from data/chapters on first use (a few cents of embeddings at most)
 data/lecture_index.npz
 

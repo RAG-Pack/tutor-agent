@@ -11,6 +11,12 @@ The data, in `data/`:
 - `lecture_index.npz`: two embeddings per chapter, one of its title and summary, one of
   its transcript. It's built on first use, and again whenever the chapters change.
 
+The captions and chapters come in the **lecture bundle**, a download on the course site
+(`BUNDLE_PAGE`), rather than in this public repo: the recordings' Q&A has students
+speaking and named. Without the bundle the tutor still runs, and the two tools tell
+the student where to get it. `sessions.json` stays in the repo, so a session listed
+there without chapters here means the student's bundle predates it.
+
 A chapter's score is the better of its two matches. The title and summary match most
 questions best (15 of 16 test questions ranked the right chapter first, against 12 of
 16 for the transcript alone, which dilutes the topic), and the transcript catches
@@ -39,6 +45,9 @@ from .captions import Cue, format_time, parse_time, read_srt
 from .llm import EmbeddingModel
 
 DATA = Path(__file__).resolve().parents[1] / "data"
+
+# Where students download the lecture bundle, tutor-data.zip: Session 3's lesson
+BUNDLE_PAGE = "https://www.ragpack.ai/products/introduction-to-agents/categories/2160943905/posts/2201198510"
 
 # Longest transcript embedded per chapter, in characters (~6k tokens; the model takes 8k)
 MAX_EMBED_CHARS = 24_000
@@ -73,17 +82,20 @@ class Lectures:
         self.data = Path(data)
         self.sessions = {s["session"]: s for s in json.loads((self.data / "sessions.json").read_text())}
         self.chapters = self._load_chapters()
+        # Sessions with a recording page but no chapters here: not in the student's bundle yet
+        self.missing = sorted(set(self.sessions) - {c.session for c in self.chapters})
         self.embedding_model = embedding_model or EmbeddingModel()
-        self.embeddings = self._load_index()
+        self.embeddings = self._load_index() if self.chapters else None
 
     def _load_chapters(self) -> list[Chapter]:
-        """Every session that has chapters, with each chapter's captions."""
+        """Every session whose chapters and captions are here, with each chapter's captions."""
         chapters = []
         for n in sorted(self.sessions):
             path = self.data / "chapters" / f"session{n}.json"
-            if not path.exists():
+            captions = self.data / "transcripts" / f"session{n}.srt"
+            if not (path.exists() and captions.exists()):
                 continue
-            cues = read_srt(self.data / "transcripts" / f"session{n}.srt")
+            cues = read_srt(captions)
             marks = json.loads(path.read_text())["chapters"]
 
             # Each chapter runs to the next one's start (the last, to the end of the video)
@@ -128,10 +140,25 @@ class Lectures:
                 return chapter
         return None
 
+    def bundle_note(self, sessions: list[int] | None = None) -> str:
+        """What to tell the student when recordings are missing from their lecture bundle."""
+        sessions = self.missing if sessions is None else sessions
+        if not sessions:
+            return ""
+        names = ", ".join(str(n) for n in sessions)
+        which = f"Session {names}'s recording isn't" if len(sessions) == 1 else f"Sessions {names}' recordings aren't"
+        return (f"{which} on the student's computer yet. Tell them to download the newest lecture "
+                f"bundle (tutor-data.zip) from {BUNDLE_PAGE}, unzip it in the tutor-agent folder "
+                f"(it fills data/), and restart the tutor.")
+
     # ---- Tools ---------------------------------------------------------------
 
     def search_lectures(self, query: str, session: int = 0) -> str:
         """Search the course's lecture recordings for the parts that cover a topic. Write `query` as the topic itself, in the student's words plus its key terms ("why the model forgets earlier messages"), and leave out names and session titles, which match every part. Set `session` to search one session's recording only, when the student names a session; leave it out to search them all. Returns the 4 best-matching parts: session, title, start and end times in the video, a link that opens the recording at the start, speaker, a summary, and the `read_lecture` call that reads it. Then read the one whose title and summary fit the question best."""
+        if not self.chapters:
+            return self.bundle_note()
+        if int(session) in self.missing:
+            return self.bundle_note([int(session)])
         query_embedding = self.embedding_model.embed([query])[0]
 
         # Cosine similarity: a dot product, for embeddings of magnitude 1.
@@ -161,11 +188,14 @@ class Lectures:
             )
 
         covered = session or ", ".join(str(n) for n in sorted({c.session for c in self.chapters}))
-        return "\n\n".join(results) + f"\n\n(Recordings searched: sessions {covered}.)"
+        note = f" {self.bundle_note()}" if self.missing and not session else ""
+        return "\n\n".join(results) + f"\n\n(Recordings searched: sessions {covered}.{note})"
 
     def read_lecture(self, session: int, part: int) -> str:
         """Read one part of a lecture recording: its transcript, with the time in the video every 30 seconds or so (and the seconds for a link that opens the recording there), so you can link the student to the moment something is said. Use the session and part numbers from `search_lectures`."""
         found = self.chapter(int(session), int(part))
+        if found is None and int(session) in self.missing:
+            return self.bundle_note([int(session)])
         if found is None:
             return f"No part {part} in session {session}'s recording. Use search_lectures to find one."
 

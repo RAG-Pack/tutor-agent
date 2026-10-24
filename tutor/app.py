@@ -36,7 +36,7 @@ import gradio as gr
 
 from .agent import Step, TinyAgent
 from .build import build_tutor
-from .lectures import Lectures
+from .lectures import BUNDLE_PAGE, Lectures
 from .student import Student
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -349,6 +349,9 @@ def main():
     args = parser.parse_args()
 
     LECTURES = Lectures()
+    if LECTURES.missing:  # Say so here too: the tutor only finds out when it searches
+        print(f"Lecture search: no recordings for session {', '.join(map(str, LECTURES.missing))}. "
+              f"Download tutor-data.zip from {BUNDLE_PAGE} and unzip it in this folder.")
     STUDENT = Student(args.student)
     build_app().launch(server_port=args.port, share=args.share, theme=gr.themes.Soft())
 
