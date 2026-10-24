@@ -14,6 +14,6 @@ Does the "one word ahead" part make sense?
 
 **Student:** Did anyone explain how to deploy an agent to production?
 
-**Tutor:** The recordings so far (Sessions 1 and 2) don't seem to cover deployment.
+**Tutor:** The recordings so far (Sessions 1 to 3) don't seem to cover deployment.
 From general knowledge, not the course: ... Want me to keep this short, or walk through
 one piece of it?

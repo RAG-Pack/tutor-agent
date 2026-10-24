@@ -94,7 +94,7 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
    chapter's first line to the captions for its start time. The brief and the tools
    that check its work live with the course material, in `sessions/lecture-chapters/`
    of the course repo (`chrisjmccormick/An-Illustrated-Guide-To-AI-Agents`); this repo
-   ships the results in `data/chapters/` (Session 1: 35 chapters, Session 2: 28).
+   ships the results in `data/chapters/` (Session 1: 35 chapters, Session 2: 28, Session 3: 25).
 2. **Index.** Each chapter gets two embeddings (OpenAI `text-embedding-3-small`): its
    title and summary, and its transcript. A chapter's score is the better of the two. On
    16 test questions the title-and-summary embedding put the right chapter first 15
