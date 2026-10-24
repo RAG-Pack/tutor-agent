@@ -5,7 +5,6 @@ from pathlib import Path
 from .agent import TinyAgent
 from .lectures import Lectures
 from .llm import LLM
-from .mcp import MCPServer
 from .memory import CompactMemory
 from .skills import Skills
 from .student import Student
@@ -17,14 +16,12 @@ def build_tutor(
     lectures: Lectures | None = None,
     student: Student | None = None,
     model: str | None = None,
-    colab: MCPServer | None = None,
 ) -> TinyAgent:
     """The course tutor.
 
     - Instructions: `TUTOR.md`, then the student's `MEMORY.md`
     - Skills: the `skills/` folder, loaded with `load_skill`
-    - Tools: lecture search, the study log, `remember`, and the Colab MCP server's
-      tools if one is running
+    - Tools: lecture search, the study log, and `remember`
     - Memory: `CompactMemory`, for the Compact button
     """
     lectures = lectures or Lectures()
@@ -37,8 +34,6 @@ def build_tutor(
     tools.add_tool("read_log", student.read_log)
     tools.add_tool("log_session", student.log_session)
     tools.add_tool("remember", student.remember)
-    if colab:
-        colab.register(tools)
 
     # The same LLM for the agent and its memory
     llm = LLM(model=model) if model else LLM()

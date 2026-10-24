@@ -1,10 +1,7 @@
 """`tool_to_schema` and `NativeTools` from Session 3.
 
-Two changes:
-- A tool that raises returns the error as its observation, so the model can read what
-  went wrong and try again, where the notebook would stop.
-- A tool can come with its schema already written, as an MCP server's tools do
-  (`tutor/mcp.py`), instead of one built from a Python function.
+One change: a tool that raises returns the error as its observation, so the model
+can read what went wrong and try again, where the notebook would stop.
 """
 
 import inspect
@@ -62,15 +59,15 @@ class NativeTools:
     def __init__(self):
         self.registry = {}
 
-    def add_tool(self, name: str, func: Callable, schema: dict | None = None) -> None:
-        """Register a tool that the Agent can use (with its schema, if it has one already)."""
-        self.registry[name] = {"function": func, "schema": schema}
+    def add_tool(self, name: str, func: Callable) -> None:
+        """Register a tool that the Agent can use."""
+        self.registry[name] = {"function": func}
 
     @property
     def schemas(self) -> list[dict]:
         """Return tool functions for native function calling."""
         return [
-            tool["schema"] or tool_to_schema(tool["function"]) for tool in self.registry.values()
+            tool_to_schema(tool["function"]) for tool in self.registry.values()
         ]
 
     @property

@@ -15,27 +15,18 @@ New:
   no System field
 - Tabs for what the model sees (system prompt, messages, tool schemas) and for the
   student (memory, study log)
-- Colab: Google's Colab MCP server starts with the app, so the tutor can build a
-  notebook in a browser tab (the `colab-lesson` skill). While a tool runs, the chat
-  says which one, and what the student needs to do (connect the Colab tab).
 
 Not carried over: the **Thinking** checkbox. The gpt-5.4 models refuse reasoning
 together with tools in /chat/completions, and the tutor always has tools.
 
     uv run tutor               # http://localhost:7860
     uv run tutor --share       # plus a public link, for a phone or a friend
-    uv run tutor --no-colab    # without the Colab MCP server
-
-The Colab tab opens in the browser of the computer running the app.
 """
 
 import argparse
-import atexit
+import html
 import os
-import threading
-import time
 import urllib.error
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -45,7 +36,6 @@ import gradio as gr
 from .agent import Step, TinyAgent
 from .build import build_tutor
 from .lectures import Lectures
-from .mcp import COLAB_MCP, MCPServer
 from .student import Student
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,7 +52,6 @@ EXAMPLES = [
     "What was the headlight analogy in Session 1?",
     "Why does the model forget my name between messages?",
     "Quiz me on Session 2.",
-    "Build me a Colab notebook that shows how message history works.",
     "What have I studied so far?",
     "Log this session.",
 ]
@@ -77,32 +66,13 @@ class Chat:
     used: int = 0                                     # context used by the last call
 
 
-# Loaded once, shared by every tab (so is the Colab notebook)
+# Loaded once, shared by every tab
 LECTURES: Lectures | None = None
 STUDENT: Student | None = None
-COLAB: MCPServer | None = None
-
-# What the student sees while a tool runs, for the slow ones
-TOOL_HINTS = {
-    "open_colab_browser_connection": "A Colab notebook opened in a new browser tab: "
-                                     "allow the connection there (the tutor waits 60 s).",
-    "run_code_cell": "Running the cell in Colab (the first run starts a runtime).",
-}
-
-
-def start_colab():
-    """Start the Colab MCP server in the background (uvx takes a few seconds)."""
-    global COLAB
-    try:
-        COLAB = MCPServer(COLAB_MCP)
-        atexit.register(COLAB.close)
-        print("Colab MCP server ready.", flush=True)
-    except Exception as e:
-        print(f"Colab MCP server didn't start, so no Colab tools: {e}", flush=True)
 
 
 def new_chat() -> Chat:
-    return Chat(agent=build_tutor(lectures=LECTURES, student=STUDENT, colab=COLAB))
+    return Chat(agent=build_tutor(lectures=LECTURES, student=STUDENT))
 
 
 # ---- Drawing the chat --------------------------------------------------------
@@ -139,8 +109,7 @@ def _tool_message(step: Step) -> dict:
     return {
         "role": "assistant",
         "content": _quote(step.observation),
-        # In backticks, so markdown leaves the code alone (`__init__` would turn bold)
-        "metadata": {"title": f"🔧 `{step.action['tool']}({args})`", "log": _tokens(step.metadata), "status": "done"},
+        "metadata": {"title": f"🔧 {step.action['tool']}({args})", "log": _tokens(step.metadata), "status": "done"},
     }
 
 
@@ -201,14 +170,6 @@ def _error(e: Exception) -> str:
     return f"**Error**\n\n```\n{message}\n```"
 
 
-def _working(action: dict | None) -> str:
-    """The label on the step in progress: the tool running, if one is."""
-    if action is None:
-        return "Thinking..."
-    hint = TOOL_HINTS.get(action["tool"], "")
-    return f"🔧 {action['tool']}  {hint}".strip()
-
-
 def views(chat: Chat, working: str = "") -> list:
     """Everything on the page that shows the chat's state."""
     agent = chat.agent
@@ -235,32 +196,17 @@ def views(chat: Chat, working: str = "") -> list:
 # ---- Running the agent -------------------------------------------------------
 
 def _run(chat: Chat, max_steps: int):
-    """Step the agent until it answers (or `max_steps`), re-drawing after each step.
-
-    Each step runs in a thread, so while a slow tool runs (Colab), the chat can say which.
-    """
+    """Step the agent until it answers (or `max_steps`), re-drawing after each step."""
     chat.notice = ""
-    steps = chat.agent.steps(int(max_steps))
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        while True:
-            future = pool.submit(next, steps, None)
-            shown = None
-            while not future.done():
-                action = chat.agent.current_action
-                if action is not shown:
-                    shown = action
-                    yield views(chat, _working(action))
-                time.sleep(0.2)
-            try:
-                step = future.result()
-            except Exception as e:
-                chat.notice = _error(e)
-                yield views(chat)
-                return
-            if step is None:
-                break
+    try:
+        for step in chat.agent.steps(int(max_steps)):
             chat.used = step.metadata["prompt_tokens"] + step.metadata["completion_tokens"]
-            yield views(chat, "" if step.answer is not None else "Thinking...")
+            working = "" if step.answer is not None else "Thinking..."
+            yield views(chat, working)
+    except Exception as e:
+        chat.notice = _error(e)
+        yield views(chat)
+        return
 
     # Nearly out of context: compact on our own, once the tutor has answered
     if chat.used > CONTEXT_BUDGET * AUTO_COMPACT and not _pending(chat.agent):
@@ -306,9 +252,6 @@ def _compact(chat: Chat, auto: bool = False):
 
 def on_send(message: dict, chat: Chat | None, max_steps: int):
     chat = chat or new_chat()
-    # Colab finished starting after this chat began: add its tools now
-    if COLAB and chat.agent.tools not in COLAB.registries:
-        COLAB.register(chat.agent.tools)
     text = (message or {}).get("text", "").strip()
     files = (message or {}).get("files", [])
     if not text and not files:
@@ -380,7 +323,7 @@ def build_app() -> gr.Blocks:
                 continue_button = gr.Button("Continue", variant="primary", interactive=False, scale=1)
                 compact_button = gr.Button("Compact", scale=1)
                 clear_button = gr.Button("Clear", variant="stop", scale=1)
-                max_steps = gr.Slider(1, 30, value=25, step=1, label="Max steps per message", scale=2)
+                max_steps = gr.Slider(1, 10, value=6, step=1, label="Max steps per message", scale=2)
                 context = gr.HTML(context_bar(0))
             gr.Examples([{"text": text, "files": []} for text in EXAMPLES], inputs=textbox, label="Try")
 
@@ -413,13 +356,10 @@ def main():
     parser.add_argument("--port", type=int, default=7860)
     parser.add_argument("--share", action="store_true", help="also make a public gradio.live link")
     parser.add_argument("--student", default=str(ROOT / "student"), help="the student's folder (MEMORY.md, study_log.tsv)")
-    parser.add_argument("--no-colab", action="store_true", help="don't start the Colab MCP server")
     args = parser.parse_args()
 
     LECTURES = Lectures()
     STUDENT = Student(args.student)
-    if not args.no_colab:
-        threading.Thread(target=start_colab, daemon=True).start()
     build_app().launch(server_port=args.port, share=args.share, theme=gr.themes.Soft())
 
 
