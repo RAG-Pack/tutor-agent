@@ -32,12 +32,6 @@ uv run tutor                     # http://localhost:7860
 model (any gpt-5.4 model works; older ones reject `reasoning_effort: "none"`), and
 `TUTOR_CONTEXT` sets the context budget for auto-compaction (default 32,000 tokens).
 
-From the command line, each argument one message in the same conversation:
-
-```bash
-uv run python scripts/ask.py "What was the headlight analogy?" "How does that connect to reasoning models?"
-```
-
 The first run copies the example student from Session 3 (a backend engineer building
 a Discord bot, with five logged study sessions) into `student/`, which git ignores.
 Edit or empty `student/MEMORY.md` and `student/study_log.tsv` to make it yours.
@@ -58,7 +52,6 @@ Edit or empty `student/MEMORY.md` and `student/study_log.tsv` to make it yours.
 | `tutor/build.py` | `build_tutor()`: everything wired into one agent |
 | `tutor/app.py` | The Gradio chat |
 | `data/` | `sessions.json` (titles, recording pages), captions, chapters (made in the course repo) |
-| `scripts/ask.py` | Ask the tutor from the command line, printing every step |
 
 ## How it works
 

@@ -20,8 +20,15 @@ branch like that too, so `main` stays easy to read.
 
 ## Run and test
 
-- `uv sync`, then `uv run tutor` for the Gradio chat, or
-  `uv run python scripts/ask.py "question" "follow-up"` to print every step.
+- `uv sync`, then `uv run tutor` for the Gradio chat.
+- To test without the browser, write a short script in an agent-ops session folder
+  (`agent-ops/tutor-agent/<session>/`, laid out per `agent-ops/CONVENTION.md`) and run
+  it from this repo's root with `uv run python ../agent-ops/tutor-agent/<session>/test.py`:
+  the venv has `tutor` installed, so the script imports it directly. Test scripts and
+  their output stay there, beside the results they back, and this repo stays what
+  students read. A starting point:
+  `agent-ops/tutor-agent/2026-10-21_1043am_tutor-agent-build/ask.py` takes each argument
+  as one message and prints every tool call, result and token count.
 - The OpenAI key comes from `OPENAI_AGENTS_COURSE` (Chris's env.sh) or
   `OPENAI_API_KEY`. On the Mac mini, API calls need the sandbox off.
 - Check a behavior change against the model, not just by reading the prompt:
