@@ -1,7 +1,7 @@
 [project]
 name = "tutor-agent"
 version = "0.1.0"
-description = "A course tutor for RAG Pack's Introduction to Agents: Session 3's TinyAgent with a TUTOR.md, skills, lecture video search and a Gradio chat"
+description = "A course tutor for RAG Pack's Introduction to Agents: Session 4's TinyAgent with a TUTOR.md, skills, lecture video search, planning and a Gradio chat"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

@@ -2,22 +2,23 @@
 
 From Session 3's `ChatUI`:
 - Each tool step shows as an action and its observation (click to open), with tokens
-- **Continue**: one more step, when a run stopped before an answer (the step limit,
-  or an empty reply)
 - **Compact**: `CompactMemory` summarizes the conversation, and does it on its own
   past 75% of the context budget
 - Attach files to a message, and the date and time on each message
 - **Clear** keeps the system prompt
 
 New:
-- The loop: up to **Max steps** LLM calls per message (1 is Session 3's agent)
+- The loop and planning (Session 4): the tutor steps until it answers, up to the
+  planner's `max_steps`, and a plan shows as its `update_plan` and `mark_done` steps
 - The system prompt comes from `TUTOR.md` and the student's `MEMORY.md`, so there's
   no System field
 - Tabs for what the model sees (system prompt, messages, tool schemas) and for the
   student (memory, study log)
 
-Not carried over: the **Thinking** checkbox. The gpt-5.4 models refuse reasoning
-together with tools in /chat/completions, and the tutor always has tools.
+Not carried over: the **Thinking** checkbox (the gpt-5.4 models refuse reasoning
+together with tools in /chat/completions, and the tutor always has tools), and
+**Continue**, which the loop replaces: a run that hits `max_steps` carries on when the
+student sends another message.
 
     uv run tutor               # http://localhost:7860
     uv run tutor --share       # plus a public link, for a phone or a friend
@@ -52,6 +53,7 @@ EXAMPLES = [
     "What was the headlight analogy in Session 1?",
     "Why does the model forget my name between messages?",
     "Quiz me on Session 2.",
+    "Make me a review sheet for Sessions 1 and 2: the three main ideas from each, with where to rewatch them.",
     "What have I studied so far?",
     "Log this session.",
 ]
@@ -175,8 +177,9 @@ def views(chat: Chat, working: str = "") -> list:
     """Everything on the page that shows the chat's state."""
     agent = chat.agent
     hints = {
-        "tool": "🔧 The tutor used all its steps without answering. Click **Continue** for more, or send a new message.",
-        "empty": "The reply came back empty. Click **Continue** to let it try again.",
+        "tool": f"🔧 The tutor used all {agent.planner.max_steps} steps without answering. "
+                "Send a message (\"keep going\") to let it carry on.",
+        "empty": "The reply came back empty. Send your message again.",
     }
     pending = None if working else _pending(agent)
     notice = chat.notice or hints.get(pending, "")
@@ -185,7 +188,6 @@ def views(chat: Chat, working: str = "") -> list:
         chat_messages(chat, working),
         notice,
         context_bar(chat.used),
-        gr.update(interactive=pending is not None and not working),
         agent.trajectory.system_prompt or "",
         agent.memory.get_messages(),
         agent.tools.schemas,
@@ -196,11 +198,11 @@ def views(chat: Chat, working: str = "") -> list:
 
 # ---- Running the agent -------------------------------------------------------
 
-def _run(chat: Chat, max_steps: int):
+def _run(chat: Chat):
     """Step the agent until it answers (or `max_steps`), re-drawing after each step."""
     chat.notice = ""
     try:
-        for step in chat.agent.steps(int(max_steps)):
+        for step in chat.agent.steps():
             chat.used = step.metadata["prompt_tokens"] + step.metadata["completion_tokens"]
             working = "" if step.answer is not None else "Thinking..."
             yield views(chat, working)
@@ -251,7 +253,7 @@ def _compact(chat: Chat, auto: bool = False):
 
 # ---- Buttons -----------------------------------------------------------------
 
-def on_send(message: dict, chat: Chat | None, max_steps: int):
+def on_send(message: dict, chat: Chat | None):
     chat = chat or new_chat()
     text = (message or {}).get("text", "").strip()
     files = (message or {}).get("files", [])
@@ -268,18 +270,8 @@ def on_send(message: dict, chat: Chat | None, max_steps: int):
     chat.agent.start(task)
     # Clear the input (attachments go with one message)
     yield [{"text": "", "files": []}] + views(chat, working="Thinking...")
-    for update in _run(chat, max_steps):
+    for update in _run(chat):
         yield [gr.update()] + update
-
-
-def on_continue(chat: Chat | None, max_steps: int):
-    chat = chat or new_chat()
-    # After an empty reply, take it back, so the model tries that step again
-    messages = chat.agent.memory.messages
-    if _pending(chat.agent) == "empty" and messages[-1]["role"] == "assistant":
-        messages.pop()
-    yield views(chat, working="Thinking...")
-    yield from _run(chat, max_steps)
 
 
 def on_compact(chat: Chat | None):
@@ -321,10 +313,8 @@ def build_app() -> gr.Blocks:
                 show_label=False,
             )
             with gr.Row(equal_height=True):
-                continue_button = gr.Button("Continue", variant="primary", interactive=False, scale=1)
                 compact_button = gr.Button("Compact", scale=1)
                 clear_button = gr.Button("Clear", variant="stop", scale=1)
-                max_steps = gr.Slider(1, 10, value=6, step=1, label="Max steps per message", scale=2)
                 context = gr.HTML(context_bar(0))
             gr.Examples([{"text": text, "files": []} for text in EXAMPLES], inputs=textbox, label="Try")
 
@@ -339,11 +329,10 @@ def build_app() -> gr.Blocks:
             memory_view = gr.Markdown(label="MEMORY.md")
             log_view = gr.Dataframe(headers=["start", "end", "learned"], label="Study log", wrap=True)
 
-        outputs = [chat, chatbot, notice, context, continue_button,
+        outputs = [chat, chatbot, notice, context,
                    system_view, messages_view, tools_view, memory_view, log_view]
 
-        textbox.submit(on_send, [textbox, chat, max_steps], [textbox] + outputs)
-        continue_button.click(on_continue, [chat, max_steps], outputs)
+        textbox.submit(on_send, [textbox, chat], [textbox] + outputs)
         compact_button.click(on_compact, [chat], outputs)
         clear_button.click(on_clear, [chat], outputs)
         app.load(on_load, [chat], outputs)

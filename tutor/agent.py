@@ -1,13 +1,17 @@
-"""`Trajectory` and `TinyAgent` from Session 3, with two additions.
+"""`Trajectory` and `TinyAgent` from Session 4, with two changes.
 
+From Session 4: the **planner** (`tutor/planner.py`) adds its prompt to the system
+prompt, and its `max_steps` caps **the loop**, which keeps stepping until the model
+answers, so a lecture question can search, read the chapter, then answer.
+
+Changed for the tutor:
 - **The system prompt comes from files**: `TUTOR.md` (the tutor's persona and
   guidance, like Claude Code's `CLAUDE.md`) and the student's `MEMORY.md`, re-read
-  before every message so edits take effect, then the tools' prompt (the skills list).
-  This replaces the notebook's **System** field, where the student listed files.
-- **The loop** (Session 4): Session 3's `TinyAgent` stops at the observation, and the
-  **Continue** button sends it back. Here `steps()` keeps going until the model answers,
-  for up to `max_steps` LLM calls, so a lecture question can search, read the chapter,
-  then answer. With `max_steps=1` it's Session 3's agent again.
+  before every message so edits take effect, then the planner's and the tools'
+  prompts (planning, the skills list). This replaces the notebook's fixed
+  "You are a helpful assistant."
+- **`steps()` yields each step** as it's taken, so the chat can draw it before the
+  next one; `run()` is the notebook's loop on top of it.
 """
 
 from dataclasses import dataclass
@@ -16,6 +20,7 @@ from typing import Iterator
 
 from .llm import LLM, Response
 from .memory import Memory
+from .planner import NativeReAct
 from .tools import NativeTools
 
 
@@ -67,20 +72,23 @@ class TinyAgent:
         llm: LLM,
         memory: Memory,
         tools: NativeTools,
+        planner: NativeReAct,
         instructions: list[str | Path] = (),
     ):
         self.llm = llm
         self.memory = memory
         self.tools = tools
+        self.planner = planner  # <-- Session 4
         self.instructions = [Path(path) for path in instructions]  # <-- TUTOR.md, MEMORY.md
         self.trajectory = Trajectory()
         self.set_system_prompt()
 
     def system_prompt(self) -> str:
-        """The instruction files, then the tools' prompt (the skills list)."""
+        """The instruction files, then the planner's prompt, then the tools' (the skills list)."""
         parts = [path.read_text(encoding="utf-8").strip() for path in self.instructions if path.exists()]
-        if self.tools.prompt:
-            parts.append(self.tools.prompt)
+        for prompt in (self.planner.prompt, self.tools.prompt):
+            if prompt:
+                parts.append(prompt.strip())
         return "\n\n".join(parts)
 
     def set_system_prompt(self) -> None:
@@ -92,13 +100,13 @@ class TinyAgent:
         messages.insert(0, {"role": "system", "content": prompt})
         self.trajectory.system_prompt = prompt
 
-    def run(self, task: str, max_steps: int = 6) -> str:
-        """Run the agent on a task: step until it answers, or `max_steps`."""
+    def run(self, task: str) -> str:
+        """Run the agent on a task: step until it answers, or the planner's `max_steps`."""
         self.start(task)
-        step = None
-        for step in self.steps(max_steps):
-            pass
-        return step.answer if step.answer is not None else step.observation
+        for step in self.steps():
+            if step.answer is not None:
+                return step.answer
+        return "Max steps reached without completion."
 
     def start(self, task: str) -> None:
         """1. Add the user's message, and start a new run."""
@@ -106,9 +114,9 @@ class TinyAgent:
         self.memory.add("user", task)
         self.trajectory.initialize(task)
 
-    def steps(self, max_steps: int = 6) -> Iterator[Step]:
-        """The loop: one step at a time, until the model answers."""  # <-- New
-        for _ in range(max_steps):
+    def steps(self) -> Iterator[Step]:
+        """*Autonomy* loop: one step at a time, until the model answers."""
+        for _ in range(self.planner.max_steps):
             step = self._step()
             yield step
             if step.answer is not None:
@@ -127,7 +135,8 @@ class TinyAgent:
             "assistant", response.content, tool_call=response.tool_call
         )
 
-        # 4. Tool parsing
+        # 4. Planner and tool parsing
+        response = self.planner.parse(response)
         response = self.tools.parse(response)
 
         # 5. ANSWER: no tool call means we're done

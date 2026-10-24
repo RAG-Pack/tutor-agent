@@ -1,15 +1,15 @@
 # CLAUDE.md
 
 A course tutor agent for RAG Pack's *Introduction to Agents* (Oct 14–31, 2026). The
-code is the `TinyAgent` from the course's Session 3 notebook (*Memory and Tools*, in
-`chrisjmccormick/An-Illustrated-Guide-To-AI-Agents`, `sessions/session3_memory_and_tools.md`),
+code is the `TinyAgent` from the course's Session 4 notebook (*Planning*, in
+`chrisjmccormick/An-Illustrated-Guide-To-AI-Agents`, `sessions/session4_planning.md`),
 moved into `.py` files. `README.md` explains every piece; read it first.
 
 ## Keep the code the course's code
 
 Students meet these classes in the notebooks, so the tutor stays readable next to
-them: `LLM`, `Memory`, `CompactMemory`, `NativeTools`, `Trajectory` and `TinyAgent`
-keep the notebook's structure, names, step comments ("# 2. THOUGHT: ...") and plain
+them: `LLM`, `Memory`, `CompactMemory`, `NativeTools`, `NativeReAct`,
+`NativePlanAndSolve`, `Trajectory` and `TinyAgent` keep the notebook's structure, names, step comments ("# 2. THOUGHT: ...") and plain
 `urllib` requests. Add features as small, commented changes to those classes, or as new
 modules beside them, and say in the module docstring what changed from Session 3 and
 why. That keeps a diff against the notebook short enough to teach from.
@@ -17,6 +17,10 @@ why. That keeps a diff against the notebook short enough to teach from.
 `main` is the simple version. Colab lessons over MCP (`tutor/mcp.py`, the
 `colab-lesson` skill) live on the `colab-mcp` branch; build bigger features on a
 branch like that too, so `main` stays easy to read.
+
+The tutor follows the course one session at a time. When it's caught up to a session,
+tag that commit (`git tag -a session-<N>`, pushed) and make a GitHub release from the
+tag with a few lines on what's new, so each session's version stays one click away.
 
 ## Run and test
 
@@ -27,8 +31,8 @@ branch like that too, so `main` stays easy to read.
   the venv has `tutor` installed, so the script imports it directly. Test scripts and
   their output stay there, beside the results they back, and this repo stays what
   students read. A starting point:
-  `agent-ops/tutor-agent/2026-10-21_1043am_tutor-agent-build/ask.py` takes each argument
-  as one message and prints every tool call, result and token count.
+  `agent-ops/tutor-agent/2026-10-23_1000pm_session-4-planning/plan_eval.py` runs each
+  prompt on a fresh tutor (with a scratch student) and records every tool call.
 - The OpenAI key comes from `OPENAI_AGENTS_COURSE` (Chris's env.sh) or
   `OPENAI_API_KEY`. On the Mac mini, API calls need the sandbox off.
 - Check a behavior change against the model, not just by reading the prompt:

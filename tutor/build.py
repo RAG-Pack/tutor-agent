@@ -6,10 +6,14 @@ from .agent import TinyAgent
 from .lectures import Lectures
 from .llm import LLM
 from .memory import CompactMemory
+from .planner import NativePlanAndSolve
 from .skills import Skills
 from .student import Student
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# LLM calls per message: a lecture question takes about 4, a review sheet with a plan 11 to 15
+MAX_STEPS = 20
 
 
 def build_tutor(
@@ -22,6 +26,8 @@ def build_tutor(
     - Instructions: `TUTOR.md`, then the student's `MEMORY.md`
     - Skills: the `skills/` folder, loaded with `load_skill`
     - Tools: lecture search, the study log, and `remember`
+    - Planner: `NativePlanAndSolve`, which adds `update_plan` and `mark_done`, and caps
+      the loop at `max_steps` LLM calls per message
     - Memory: `CompactMemory`, for the Compact button
     """
     lectures = lectures or Lectures()
@@ -42,5 +48,6 @@ def build_tutor(
         llm          = llm,
         memory       = CompactMemory(llm),
         tools        = tools,
+        planner      = NativePlanAndSolve(tools, max_steps=MAX_STEPS),  # Adds the plan tools
         instructions = [ROOT / "TUTOR.md", student.memory_file],
     )

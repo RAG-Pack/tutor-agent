@@ -1,7 +1,7 @@
 # tutor-agent
 
 A course tutor for RAG Pack's *Introduction to Agents*. It's the `TinyAgent` from
-Session 3's notebook (*Memory and Tools*), moved into `.py` files and given:
+Session 4's notebook (*Planning*), moved into `.py` files and given:
 
 - a **`TUTOR.md`**, always in the system prompt, with the tutor's persona and guidance
   (the way Claude Code always loads `CLAUDE.md`);
@@ -9,7 +9,8 @@ Session 3's notebook (*Memory and Tools*), moved into `.py` files and given:
 - **lecture video search**: the session recordings split into chapters, so the tutor can
   answer "what did Josh say about GRPO?" and send the student to the right minute;
 - a **student memory** (`MEMORY.md`) and the **study log** from Sessions 2 and 3;
-- **the loop** from Session 4, so a question can take several tool calls;
+- **the loop and planning** from Session 4: a question can take several tool calls,
+  and a request with several parts gets a plan (`update_plan`, `mark_done`);
 - a **Gradio** chat in place of the notebook's `ChatUI`.
 
 It runs on OpenAI's `gpt-5.4-nano`, the smallest and cheapest model from the Oct 6 tests:
@@ -19,6 +20,9 @@ The [`colab-mcp`](https://github.com/RAG-Pack/tutor-agent/tree/colab-mcp) branch
 **Colab lessons over MCP**: Google's Colab MCP server lets the tutor build a short
 notebook in the student's browser, with example cells it has run to check and an
 exercise to finish. `main` is the simpler version, without it.
+
+Each session's version is tagged, with a release page: `session-3` is the tutor
+before planning, with Session 3's **Continue** button.
 
 ## Run it
 
@@ -46,7 +50,8 @@ Edit or empty `student/MEMORY.md` and `student/study_log.tsv` to make it yours.
 | `tutor/memory.py` | `Memory` and `CompactMemory` (Session 3's) |
 | `tutor/tools.py` | `tool_to_schema` and `NativeTools` (Session 3's) |
 | `tutor/skills.py` | `Skills`: a `NativeTools` with the `load_skill` tool and the skills list |
-| `tutor/agent.py` | `Trajectory` and `TinyAgent`, with the system prompt from files and the loop |
+| `tutor/planner.py` | `NativeReAct` and `NativePlanAndSolve` (Session 4's): `max_steps`, and the plan tools |
+| `tutor/agent.py` | `Trajectory` and `TinyAgent`, with the planner, the system prompt from files, and the loop |
 | `tutor/lectures.py` | The chapters, their embeddings, `search_lectures` and `read_lecture` |
 | `tutor/student.py` | `MEMORY.md` and the study log: `remember`, `read_log`, `log_session` |
 | `tutor/build.py` | `build_tutor()`: everything wired into one agent |
@@ -107,18 +112,34 @@ the course repo, with this repo checked out beside it. It puts the captions in
 `data/transcripts/`, the session in `data/sessions.json` and the chapters in
 `data/chapters/`, here; the index rebuilds on the next start.
 
-### The loop
+### The loop and the plan
 
-Session 3's `TinyAgent` stops at the observation, and **Continue** sends it back. Here
-`TinyAgent.steps()` keeps going until the model answers, for up to **Max steps** LLM
-calls per message (default 6; a lecture question usually takes 4: load the skill,
-search, read, answer). Set it to 1 for Session 3's behavior, and step through with
-**Continue**.
+As in Session 4, `TinyAgent` takes a planner. `TinyAgent.steps()` keeps going until the
+model answers, for up to the planner's `max_steps` LLM calls per message (20 here; a
+lecture question takes about 4: load the skill, search, read, answer). A run that hits
+the cap stops with a note under the chat, and carries on when the student sends another
+message. That replaces Session 3's **Continue** button.
+
+The planner is `NativePlanAndSolve`, unchanged from the notebook: it adds `update_plan`
+and `mark_done` to the tools and a *Planning* section to the system prompt. The plan
+comes back in every tool result, so the model sees what's done and what's left, and the
+chat shows it as those tools' steps.
+
+Where the tutor is told to plan matters with `gpt-5.4-nano`. On 3 runs each of three
+multi-part requests (a catch-up on a missed session, a comparison across two sessions, a
+review sheet for two sessions), the notebook's *Planning* prompt alone made 0 plans in
+9, and the same rule added to `TUTOR.md` 1 in 7 (an API timeout cut that batch short):
+once `load_skill` returns the **lecture-videos** steps, the model follows them. With
+planning as the skill's first step, it planned 5 of 9 (the review sheet 3/3, the
+comparison 2/3, the catch-up 0/3), and never for a single question or "Hi!" (0 of 6).
+Its bookkeeping is loose, as the notebook warns for small models: it often marks tasks
+done in a batch at the end, or skips some. A review sheet with a plan took 11 to 13
+steps, and one run in 3 hit the earlier cap of 15, hence 20.
 
 ### The chat
 
 From Session 3's `ChatUI`: tool steps shown as action and observation (click to open),
-token counts on each step, **Continue**, **Compact** (and auto-compaction past 75% of
+token counts on each step, **Compact** (and auto-compaction past 75% of
 the context budget), attached files, the time on each message, **Clear** keeping the
 system prompt. Each browser tab has its own conversation; the student's folder is
 shared.

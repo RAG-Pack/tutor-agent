@@ -1,11 +1,14 @@
-"""`tool_to_schema` and `NativeTools` from Session 3.
+"""`tool_to_schema` and `NativeTools` from Session 3, with Session 4's lists.
 
-One change: a tool that raises returns the error as its observation, so the model
-can read what went wrong and try again, where the notebook would stop.
+- `tool_to_schema` turns a list argument (`list[str]`) into an array of that type, as
+  Session 4's does, for the planner's `update_plan(items)`.
+- A tool that raises returns the error as its observation, so the model can read what
+  went wrong and try again, where the notebook would stop.
 """
 
 import inspect
 import json
+import typing
 from typing import Any, Callable
 
 from .llm import Response
@@ -26,11 +29,16 @@ def tool_to_schema(function: Callable) -> dict:
     required = []
 
     for name, parameter in signature.parameters.items():
+        annotation = parameter.annotation
 
-        # Add the argument by its name. Specify its type.
-        properties[name] = {
-            "type": TYPE_MAP.get(parameter.annotation, "string")
-        }
+        # A list, e.g. `list[str]`: an array of that type  <-- Session 4
+        if typing.get_origin(annotation) is list:
+            item_type = typing.get_args(annotation)[0]
+            properties[name] = {"type": "array", "items": {"type": TYPE_MAP.get(item_type, "string")}}
+
+        # Otherwise, add the argument by its name. Specify its type.
+        else:
+            properties[name] = {"type": TYPE_MAP.get(annotation, "string")}
 
         # Check if required
         if parameter.default is inspect.Parameter.empty:
