@@ -15,8 +15,8 @@ modules beside them, and say in the module docstring what changed from Session 3
 why. That keeps a diff against the notebook short enough to teach from.
 
 `main` is the simple version. Colab lessons over MCP (`tutor/mcp.py`, the
-`colab-lesson` skill) live on the `colab-mcp` branch, one commit on top of `main`;
-build bigger features on a branch like that too, so `main` stays easy to read.
+`colab-lesson` skill) live on the `colab-mcp` branch; build bigger features on a
+branch like that too, so `main` stays easy to read.
 
 ## Run and test
 
@@ -31,7 +31,10 @@ build bigger features on a branch like that too, so `main` stays easy to read.
 ## Data
 
 - `data/chapters/session<N>.json` is written by an agent following
-  `scripts/CHAPTERS.md`; check it with `python3 scripts/check_chapters.py <N>`.
+  `sessions/lecture-chapters/CHAPTERS.md` in the course repo
+  (`chrisjmccormick/An-Illustrated-Guide-To-AI-Agents`, checked out beside this one),
+  whose `check_chapters.py <N>` checks the chapters against `data/transcripts/`. This
+  repo ships the results, and the course repo keeps the tools.
 - `data/lecture_index.npz` rebuilds itself when the chapters change, and git ignores it.
 - `student/` is one student's memory and log, and git ignores it; the example student
   lives in `examples/student/`.

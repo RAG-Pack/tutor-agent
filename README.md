@@ -57,8 +57,8 @@ Edit or empty `student/MEMORY.md` and `student/study_log.tsv` to make it yours.
 | `tutor/student.py` | `MEMORY.md` and the study log: `remember`, `read_log`, `log_session` |
 | `tutor/build.py` | `build_tutor()`: everything wired into one agent |
 | `tutor/app.py` | The Gradio chat |
-| `data/` | `sessions.json` (titles, recording pages), captions, chapters |
-| `scripts/` | Chaptering a recording, building the index, `ask.py` |
+| `data/` | `sessions.json` (titles, recording pages), captions, chapters (made in the course repo) |
+| `scripts/ask.py` | Ask the tutor from the command line, printing every step |
 
 ## How it works
 
@@ -93,10 +93,10 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
 
 1. **Chapters.** A coding agent reads a session's transcript without timestamps, marks
    the natural break points, titles and summarizes each chapter, then matches each
-   chapter's first line to the captions for its start time. The brief is
-   [`scripts/CHAPTERS.md`](scripts/CHAPTERS.md); the results are in `data/chapters/`
-   (Session 1: 35 chapters, Session 2: 28). `scripts/check_chapters.py` checks them
-   against the captions.
+   chapter's first line to the captions for its start time. The brief and the tools
+   that check its work live with the course material, in `sessions/lecture-chapters/`
+   of the course repo (`chrisjmccormick/An-Illustrated-Guide-To-AI-Agents`); this repo
+   ships the results in `data/chapters/` (Session 1: 35 chapters, Session 2: 28).
 2. **Index.** Each chapter gets two embeddings (OpenAI `text-embedding-3-small`): its
    title and summary, and its transcript. A chapter's score is the better of the two. On
    16 test questions the title-and-summary embedding put the right chapter first 15
@@ -109,10 +109,10 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
    The course site has no links to a time in a video, so the tutor says "open this page
    and skip to 22:09".
 
-**Adding a session's recording:** put its captions in
-`data/transcripts/session<N>.srt`, add it to `data/sessions.json` (with its page URL),
-have a coding agent follow `scripts/CHAPTERS.md` for `<N>`, and run
-`python3 scripts/check_chapters.py <N>`. The index rebuilds on the next start.
+**Adding a session's recording:** follow `sessions/lecture-chapters/CHAPTERS.md` in
+the course repo, with this repo checked out beside it. It puts the captions in
+`data/transcripts/`, the session in `data/sessions.json` and the chapters in
+`data/chapters/`, here; the index rebuilds on the next start.
 
 ### The loop
 
