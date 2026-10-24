@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 A course tutor agent for RAG Pack's *Introduction to Agents* (Oct 14–31, 2026). The
-code is the `TinyAgent` from the course's Session 4 notebook (*Planning*, in the
-private course repo `RAG-Pack/intro-to-agents`, `session4/session4_planning.md`),
+code is the `TinyAgent` from the course's Session 4 notebook (*Session 4 - Autonomy and
+Planning*, in the private course repo `RAG-Pack/intro-to-agents`, `session4/`),
 moved into `.py` files. `README.md` explains every piece; read it first.
 
 ## Keep the code the course's code
@@ -43,9 +43,10 @@ tag with a few lines on what's new, so each session's version stays one click aw
 
 - This repo is public. The recordings' captions and chapters (`data/transcripts/`,
   `data/chapters/`) name students who spoke in Q&A, so git ignores them: they live in
-  the private course repo (`RAG-Pack/intro-to-agents`, checked out beside this one, one
-  `session<N>/` folder each) and reach students as the lecture bundle, `tutor-data.zip`,
-  on Session 3's lesson (`BUNDLE_PAGE` in `tutor/lectures.py`). Follow that repo's
+  the private course repo (`RAG-Pack/intro-to-agents`, checked out beside this one: the
+  captions in its `session<N>/` folders, the chapters in `lecture-chapters/chapters/`)
+  and reach students as the lecture bundle, `tutor-data.zip`, on Session 3's lesson
+  (`BUNDLE_PAGE` in `tutor/lectures.py`). Follow that repo's
   `lecture-chapters/CHAPTERS.md` to add a recording; its `build_bundle.py --install
   ../tutor-agent` fills your `data/` to test. Keep transcripts, chat logs and students'
   names out of this repo's commits, test logs included.
