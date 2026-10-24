@@ -101,11 +101,20 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
    times, the transcript alone 12 times (a whole chapter's talk dilutes its topic). The
    index builds itself on first use and whenever the chapters change.
 3. **Tools.** `search_lectures(query, session)` returns the 4 best chapters (times,
-   speaker, summary); `read_lecture(session, chapter)` returns that chapter's
+   speaker, summary); `read_lecture(session, part)` returns that chapter's
    transcript with a time every ~30 seconds. The `lecture-videos` skill says how to
-   answer: explain it the instructor's way, then give the time and the recording's page.
-   The course site has no links to a time in a video, so the tutor says "open this page
-   and skip to 22:09".
+   answer: explain it the instructor's way, then link to the moment and say roughly how
+   long to watch. The course site opens a recording at a time with
+   `?video_start_at=<seconds>`, so each paragraph's time comes with its seconds, and the
+   model copies the number rather than converting `m:ss`. The course page has no
+   chapters, so what the model sees calls them **parts**, labeled by title, with the
+   number only in the `read_lecture(...)` call: with "chapter 13" in the tool output,
+   the tutor told students "chapter 13" too. Search results carry a link to each part's
+   start as well, since answers built from the search alone otherwise put Session 1
+   times on the Session 2 page (the one in the skill's example). On 30 answers (five
+   lecture questions, 6 runs each, Oct 23): every answer linked, all 62 links opened the
+   right recording at a real start time, 28 gave a window (15 in minutes, the rest as
+   a range of times), and none said "chapter" (7 of 15 before the rename).
 
 **Adding a session's recording:** follow `sessions/lecture-chapters/CHAPTERS.md` in
 the course repo, with this repo checked out beside it. It puts the captions in

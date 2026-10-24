@@ -18,7 +18,14 @@ details the summary leaves out.
 
 Two tools, the same search-then-read pattern as Session 3's retrieval tool:
 `search_lectures` finds the chapters, `read_lecture` reads one chapter's transcript
-with the times in it, so the tutor can point the student to the moment.
+with the times in it, so the tutor can link the student to the moment. The course site
+opens a recording at a time with `?video_start_at=<seconds>`, so each paragraph's time
+comes with its seconds, ready to copy into the link.
+
+Chapters are internal: the course page shows each session as one recording. So the
+tools call them **parts**, a word a student knows ("the part on GRPO"), label each by
+its title, and pass its number only in the `read_lecture(...)` call to make. Tool output
+that said "chapter 13" had the tutor telling students "chapter 13" too.
 """
 
 import hashlib
@@ -124,7 +131,7 @@ class Lectures:
     # ---- Tools ---------------------------------------------------------------
 
     def search_lectures(self, query: str, session: int = 0) -> str:
-        """Search the course's lecture recordings for the chapters that cover a topic. Write `query` as the topic itself, in the student's words plus its key terms ("why the model forgets earlier messages"), and leave out names and session titles, which match every chapter. Set `session` to search one session's recording only, when the student names a session; leave it out to search them all. Returns the 4 best-matching chapters: session and chapter number, title, start and end times in the video, speaker, and a summary. Then read the one whose title and summary fit the question best with `read_lecture`."""
+        """Search the course's lecture recordings for the parts that cover a topic. Write `query` as the topic itself, in the student's words plus its key terms ("why the model forgets earlier messages"), and leave out names and session titles, which match every part. Set `session` to search one session's recording only, when the student names a session; leave it out to search them all. Returns the 4 best-matching parts: session, title, start and end times in the video, a link that opens the recording at the start, speaker, a summary, and the `read_lecture` call that reads it. Then read the one whose title and summary fit the question best."""
         query_embedding = self.embedding_model.embed([query])[0]
 
         # Cosine similarity: a dot product, for embeddings of magnitude 1.
@@ -142,26 +149,34 @@ class Lectures:
         for index in ranked:
             chapter = self.chapters[index]
             speaker = f" ({chapter.speaker})" if chapter.speaker else ""
+            minutes = max(1, round((chapter.end - chapter.start) / 60))
+            url = self.sessions[chapter.session]["url"]
             results.append(
-                f"Session {chapter.session}, chapter {chapter.number}: {chapter.title}{speaker}\n"
-                f"{chapter.times} in the video · match {scores[index]:.2f}\n"
+                f"Session {chapter.session}: \"{chapter.title}\"{speaker} · "
+                f"read it with read_lecture(session={chapter.session}, part={chapter.number})\n"
+                f"{chapter.times} in the video (about {minutes} min) · match {scores[index]:.2f}\n"
+                # Its own link, so an answer from the search alone still opens the right recording
+                f"Watch from the start of this part: {url}?video_start_at={int(chapter.start)}\n"
                 f"{chapter.summary}"
             )
 
         covered = session or ", ".join(str(n) for n in sorted({c.session for c in self.chapters}))
         return "\n\n".join(results) + f"\n\n(Recordings searched: sessions {covered}.)"
 
-    def read_lecture(self, session: int, chapter: int) -> str:
-        """Read one chapter of a lecture recording: its transcript, with the time in the video every 30 seconds or so, so you can point the student to the moment something is said. Use the session and chapter numbers from `search_lectures`."""
-        found = self.chapter(int(session), int(chapter))
+    def read_lecture(self, session: int, part: int) -> str:
+        """Read one part of a lecture recording: its transcript, with the time in the video every 30 seconds or so (and the seconds for a link that opens the recording there), so you can link the student to the moment something is said. Use the session and part numbers from `search_lectures`."""
+        found = self.chapter(int(session), int(part))
         if found is None:
-            return f"No chapter {chapter} in session {session}'s recording. Use search_lectures to find one."
+            return f"No part {part} in session {session}'s recording. Use search_lectures to find one."
 
         info = self.sessions[found.session]
         speaker = f" ({found.speaker})" if found.speaker else ""
+        link = f"{info['url']}?video_start_at="  # + seconds: the course site opens the video there
+        minutes = max(1, round((found.end - found.start) / 60))
         lines = [
-            f"Session {found.session} ({info['title']}), chapter {found.number}: {found.title}{speaker}",
-            f"{found.times} in the video. Recording: {info['url']}",
+            f"Session {found.session} ({info['title']}): \"{found.title}\"{speaker}",
+            f"{found.times} in the video (about {minutes} min). Recording: {info['url']}",
+            f"Watch from the start of this part: {link}{int(found.start)}",
             "",
         ]
 
@@ -172,14 +187,15 @@ class Lectures:
                 paragraph_start = cue.start
             paragraph.append(cue.text)
             if cue.end - paragraph_start >= 30:
-                lines.append(f"[{format_time(paragraph_start)}] {' '.join(paragraph)}")
+                lines.append(f"[{format_time(paragraph_start)}, video_start_at={int(paragraph_start)}] {' '.join(paragraph)}")
                 paragraph, paragraph_start = [], None
         if paragraph:
-            lines.append(f"[{format_time(paragraph_start)}] {' '.join(paragraph)}")
+            lines.append(f"[{format_time(paragraph_start)}, video_start_at={int(paragraph_start)}] {' '.join(paragraph)}")
 
         lines += [
             "",
-            "(The course site has no links to a time in a video: give the student the "
-            "recording's page and the time to skip to.)",
+            f"(To open the recording where a paragraph starts, link to {link}<its video_start_at>. "
+            f"This part runs to {format_time(found.end)}. The student sees each session as one "
+            f"recording, so describe this part by its topic.)",
         ]
         return "\n".join(lines)
