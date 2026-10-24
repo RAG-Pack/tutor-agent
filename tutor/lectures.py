@@ -6,7 +6,8 @@ The data, in `data/`:
   recording.
 - `transcripts/session<N>.srt`: the recording's captions.
 - `chapters/session<N>.json`: the chapters (start time, title, speaker, summary). A
-  coding agent wrote them by reading the transcript (`scripts/CHAPTERS.md`).
+  coding agent wrote them by reading the transcript (the brief is in the course repo,
+  `sessions/lecture-chapters/CHAPTERS.md`).
 - `lecture_index.npz`: two embeddings per chapter, one of its title and summary, one of
   its transcript. It's built on first use, and again whenever the chapters change.
 
