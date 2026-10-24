@@ -42,10 +42,10 @@ tag with a few lines on what's new, so each session's version stays one click aw
 ## Data
 
 - `data/chapters/session<N>.json` is written by an agent following
-  `sessions/lecture-chapters/CHAPTERS.md` in the course repo
-  (`chrisjmccormick/An-Illustrated-Guide-To-AI-Agents`, checked out beside this one),
-  whose `check_chapters.py <N>` checks the chapters against `data/transcripts/`. This
-  repo ships the results, and the course repo keeps the tools.
+  `lecture-chapters/CHAPTERS.md` in the course repo (`RAG-Pack/intro-to-agents`,
+  checked out beside this one), whose `check_chapters.py <N>` checks the chapters
+  against `data/transcripts/`. This repo ships the results, and the course repo keeps
+  the tools.
 - `data/lecture_index.npz` rebuilds itself when the chapters change, and git ignores it.
 - `student/` is one student's memory and log, and git ignores it; the example student
   lives in `examples/student/`.

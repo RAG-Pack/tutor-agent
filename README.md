@@ -92,9 +92,9 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
 1. **Chapters.** A coding agent reads a session's transcript without timestamps, marks
    the natural break points, titles and summarizes each chapter, then matches each
    chapter's first line to the captions for its start time. The brief and the tools
-   that check its work live with the course material, in `sessions/lecture-chapters/`
-   of the course repo (`chrisjmccormick/An-Illustrated-Guide-To-AI-Agents`); this repo
-   ships the results in `data/chapters/` (Session 1: 35 chapters, Session 2: 28, Session 3: 25).
+   that check its work live with the course material, in `lecture-chapters/` of the
+   course repo (`RAG-Pack/intro-to-agents`, private); this repo ships the results in
+   `data/chapters/` (Session 1: 35 chapters, Session 2: 28, Session 3: 25).
 2. **Index.** Each chapter gets two embeddings (OpenAI `text-embedding-3-small`): its
    title and summary, and its transcript. A chapter's score is the better of the two. On
    16 test questions the title-and-summary embedding put the right chapter first 15
@@ -116,10 +116,10 @@ how" and `TUTOR.md` named the skill for lecture questions (10 of 12 before).
    right recording at a real start time, 28 gave a window (15 in minutes, the rest as
    a range of times), and none said "chapter" (7 of 15 before the rename).
 
-**Adding a session's recording:** follow `sessions/lecture-chapters/CHAPTERS.md` in
-the course repo, with this repo checked out beside it. It puts the captions in
-`data/transcripts/`, the session in `data/sessions.json` and the chapters in
-`data/chapters/`, here; the index rebuilds on the next start.
+**Adding a session's recording:** follow `lecture-chapters/CHAPTERS.md` in the course
+repo (`RAG-Pack/intro-to-agents`), with this repo checked out beside it. It puts the
+captions in `data/transcripts/`, the session in `data/sessions.json` and the chapters
+in `data/chapters/`, here; the index rebuilds on the next start.
 
 ### The loop and the plan
 
