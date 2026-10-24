@@ -16,13 +16,21 @@ why. That keeps a diff against the notebook short enough to teach from.
 
 ## Run and test
 
-- `uv sync`, then `uv run tutor` for the Gradio chat, or
-  `uv run python scripts/ask.py "question" "follow-up"` to print every step.
+- `uv sync`, then `uv run tutor` for the Gradio chat.
+- To test without the browser, write a short script in an agent-ops session folder
+  (`agent-ops/tutor-agent/<session>/`, laid out per `agent-ops/CONVENTION.md`) and run
+  it from this repo's root with `uv run python ../agent-ops/tutor-agent/<session>/test.py`:
+  the venv has `tutor` installed, so the script imports it directly. Test scripts and
+  their output stay there, beside the results they back, and this repo stays what
+  students read. A starting point:
+  `agent-ops/tutor-agent/2026-10-21_1043am_tutor-agent-build/ask.py` takes each argument
+  as one message and prints every tool call, result and token count.
 - The OpenAI key comes from `OPENAI_AGENTS_COURSE` (Chris's env.sh) or
   `OPENAI_API_KEY`. On the Mac mini, API calls need the sandbox off.
-- Colab: `scripts/ask.py --colab ...` (or the app) opens a Colab tab in this computer's
-  default browser, and the connection needs that browser signed in to Google. Tell
-  Chris before a live Colab test, since the tab opens in front of him.
+- Colab: the app, or a test script that passes `colab=MCPServer(COLAB_MCP)` (from
+  `tutor.mcp`) to `build_tutor`, opens a Colab tab in this computer's default browser,
+  and the connection needs that browser signed in to Google. Tell Chris before a live
+  Colab test, since the tab opens in front of him.
 - Check a behavior change against the model, not just by reading the prompt:
   `gpt-5.4-nano` follows instructions loosely, so run each test prompt a few times and
   count (the README's numbers came from 2–3 runs each).
