@@ -109,7 +109,8 @@ def _tool_message(step: Step) -> dict:
     return {
         "role": "assistant",
         "content": _quote(step.observation),
-        "metadata": {"title": f"🔧 {step.action['tool']}({args})", "log": _tokens(step.metadata), "status": "done"},
+        # In backticks, so markdown leaves the code alone (`__init__` would turn bold)
+        "metadata": {"title": f"🔧 `{step.action['tool']}({args})`", "log": _tokens(step.metadata), "status": "done"},
     }
 
 
