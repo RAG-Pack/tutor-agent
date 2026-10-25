@@ -25,14 +25,15 @@ tag with a few lines on what's new, so each session's version stays one click aw
 ## Run and test
 
 - `uv sync`, then `uv run tutor` for the Gradio chat.
-- To test without the browser, write a short script in an agent-ops session folder
-  (`agent-ops/tutor-agent/<session>/`, laid out per `agent-ops/CONVENTION.md`) and run
-  it from this repo's root with `uv run python ../agent-ops/tutor-agent/<session>/test.py`:
-  the venv has `tutor` installed, so the script imports it directly. Test scripts and
-  their output stay there, beside the results they back, and this repo stays what
-  students read. A starting point:
-  `agent-ops/tutor-agent/2026-10-23_1000pm_session-4-planning/plan_eval.py` runs each
-  prompt on a fresh tutor (with a scratch student) and records every tool call.
+- To test without the browser, write a short script in an ops session folder
+  (`agent-ops-ragpack/tutor-agent/<session>/`, laid out per that repo's `CLAUDE.md`) and
+  run it from this repo's root with
+  `uv run python ../agent-ops-ragpack/tutor-agent/<session>/test.py`: the venv has
+  `tutor` installed, so the script imports it directly. Test scripts and their output
+  stay there, beside the results they back, and this repo stays what students read. A
+  starting point:
+  `agent-ops-ragpack/tutor-agent/2026-10-23_1000pm_session-4-planning/plan_eval.py`
+  runs each prompt on a fresh tutor (with a scratch student) and records every tool call.
 - The OpenAI key comes from `OPENAI_AGENTS_COURSE` (Chris's env.sh) or
   `OPENAI_API_KEY`. On the Mac mini, API calls need the sandbox off.
 - Check a behavior change against the model, not just by reading the prompt:
