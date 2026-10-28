@@ -22,6 +22,12 @@ The tutor follows the course one session at a time. When it's caught up to a ses
 tag that commit (`git tag -a session-<N>`, pushed) and make a GitHub release from the
 tag with a few lines on what's new, so each session's version stays one click away.
 
+Releases tagged `notebook-sections-v<N>` are data, not versions of the tutor: the book's
+chapter notebooks split into sections for RAG, which course notebooks download (the
+*TinyAgent + Jev* prototype does). They're built and published from the course repo
+(`RAG-Pack/intro-to-agents`, `notebook-sections/SECTIONS.md`), with `--latest=false`
+so the newest `session-<N>` release stays the one GitHub shows as latest.
+
 ## Run and test
 
 - `uv sync`, then `uv run tutor` for the Gradio chat.

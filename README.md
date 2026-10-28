@@ -22,7 +22,9 @@ notebook in the student's browser, with example cells it has run to check and an
 exercise to finish. `main` is the simpler version, without it.
 
 Each session's version is tagged, with a release page: `session-3` is the tutor
-before planning, with Session 3's **Continue** button.
+before planning, with Session 3's **Continue** button. The `notebook-sections-v<N>`
+releases are data rather than tutor versions: the book's chapter notebooks split into
+sections for RAG, a download for the course's notebooks.
 
 ## Run it
 
